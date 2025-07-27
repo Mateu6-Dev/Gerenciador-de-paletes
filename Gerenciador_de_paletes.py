@@ -4,9 +4,9 @@ import psycopg2 as conector
 from datetime import datetime
 
 def conectar():
-    conn = conector.connect(dbname='ceramica',
+    conn = conector.connect(dbname='nome_do_database',
                             user='postgres',
-                            password='1234',
+                            password='#####',
                             host='localhost',
                             port='5432')
     cursor = conn.cursor()
