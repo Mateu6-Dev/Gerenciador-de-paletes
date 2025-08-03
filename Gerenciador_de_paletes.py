@@ -1,32 +1,37 @@
 import tkinter as tk
+from tkinter import END
 from tkinter import messagebox, ttk
 import psycopg2 as conector
 from datetime import datetime
 
+#=============Banco de dados===================
 def conectar():
-    conn = conector.connect(dbname='nome_do_database',
+    conn = conector.connect(dbname='ceramica',
                             user='postgres',
-                            password='#####',
+                            password='1234',
                             host='localhost',
                             port='5432')
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS movimentacao(
                         id SERIAL PRIMARY KEY,
                         tipo VARCHAR(50),
+                        empresa VARCHAR(50),
                         quantidade INTEGER,
-                        data VARCHAR(20),
+                        data_indo VARCHAR(20),
+                        data_vindo VARCHAR(20)
                         destino VARCHAR(100),
                         observacao TEXT)''')
     conn.commit()
     return conn
 
-def registrar_movimentacao(tipo, quantidade, data, destino='', observacao=''):
+def registrar_movimentacao(tipo, empresa, quantidade, destino='', observacao=''):
     conn = conectar()
     cursor = conn.cursor()
-    data = datetime.now().strftime('%d/%m/%y %H:%M')
+    data_indo = datetime.now().strftime('%d/%m/%y %H:%M')
+    data_vindo = datetime.now().strftime('%d/%m/%y %H:%M')
     cursor.execute(
-        "INSERT INTO estoque (tipo, quantidade, data, destino, observacao) VALUES (%s, %s, %s, %s, %s)",
-        (tipo, quantidade, data, destino, observacao)
+        "INSERT INTO movimentacao (tipo, empresa, quantidade, data_indo, data_vindo, destino, observacao) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (tipo, empresa, quantidade, data_indo, destino, data_vindo, observacao)
     )
     conn.commit()
     conn.close()
@@ -34,7 +39,7 @@ def registrar_movimentacao(tipo, quantidade, data, destino='', observacao=''):
 def calcular_saldo():
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT COALESCE(SUM(CASE WHEN tipo='entrada' THEN quantidade ELSE -quantidade END), 0) FROM estoque")
+    cursor.execute("SELECT COALESCE(SUM(CASE WHEN tipo='entrada' THEN quantidade ELSE -quantidade END), 0) FROM movimentacao")
     saldo = cursor.fetchone()[0]
     conn.close()
     return saldo
@@ -48,6 +53,8 @@ def obter_historico():
     return dados
 
 #================ INTERFACE ==============
+#Jogar algumas funcçõe para o aldo esquerda
+#Cadastro associado aos clientes
 
 class App:
     def __init__(self, root):
@@ -61,11 +68,11 @@ class App:
 
         #Botoes principais
         frame_botoes = tk.Frame(root)
-        frame_botoes.pack(pady=10)
+        frame_botoes.pack(anchor='w', padx=10, pady=10)
 
-        tk.Button(frame_botoes, text='Registrar entrada', width=20, command=self.registrar_entrada).grid(row=0, column=0,padx=10)
-        tk.Button(frame_botoes, text='Registrar saída', width=20, command=self.registrar_saida).grid(row=0, column=1, padx=10)
-        tk.Button(frame_botoes, text='Ver hitórico', width=20, command=self.ver_historico).grid(row=0, column=2, padx=10)
+        tk.Button(frame_botoes, text='Registrar entrada', width=20, command=self.registrar_entrada).grid(row=0, column=0,padx=10, pady=5, sticky='w')
+        tk.Button(frame_botoes, text='Registrar saída', width=20, command=self.registrar_saida).grid(row=0, column=1, padx=10, pady=5, sticky='w')
+        tk.Button(frame_botoes, text='Ver histórico', width=20, command=self.ver_historico).grid(row=0, column=2, padx=10, pady=5, sticky='w')
 
     def atualizar_saldo(self):
         self.saldo_label.config(text=f"Saldo atual: {calcular_saldo()} pallets")
@@ -78,7 +85,7 @@ class App:
 
     def janela_movimentacao(self, tipo):
         win = tk.Toplevel(self.root)
-        win.title(f'Registrar{tipo.capitalize()}')
+        win.title(f'Registrar Entrada{tipo.capitalize()}')
         win.geometry('350x250')
 
         tk.Label(win, text='Quantidade:').pack(pady=5)
@@ -95,15 +102,15 @@ class App:
 
         def salvar():
             try:
-                qtd = int(quantidade_entry.get())
+                quantidade = int(quantidade_entry.get())
                 destino = destino_entry.get() if tipo == 'saida' else ''
                 obs = obs_entry.get()
-                registrar_movimentacao(tipo, qtd, destino, obs)
+                registrar_movimentacao(tipo, quantidade, destino, obs)
                 messagebox.showinfo('Sucesso', f'{tipo.capitalize()} registrada com sucesso!')
                 win.destroy()
                 self.atualizar_saldo()
             except ValueError:
-                messagebox.showerror('Erro', 'Qusntidade deve ser um numero inteiro.')
+                messagebox.showerror('Erro', 'Quantidade deve ser um numero inteiro.')
 
         tk.Button(win, text='Salvar', command=salvar).pack(pady=10)
 
@@ -113,7 +120,7 @@ class App:
         win.title('Histórico de Movimentação')
         win.geometry('600x300')
 
-        colunas = ('Tipo', 'Quantidade', 'Data', 'Destino', 'Observação')
+        colunas = ('Tipo', 'Quantidade','Data indo', 'Destino', 'Observação', 'Data vindo')
         tree = ttk.Treeview(win, columns=colunas, show='headings')
         for col in colunas:
             tree.heading(col, text=col)
