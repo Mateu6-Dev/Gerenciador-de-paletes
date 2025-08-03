@@ -6,9 +6,9 @@ from datetime import datetime
 
 #=============Banco de dados===================
 def conectar():
-    conn = conector.connect(dbname='ceramica',
+    conn = conector.connect(dbname='########',
                             user='postgres',
-                            password='1234',
+                            password='####$',
                             host='localhost',
                             port='5432')
     cursor = conn.cursor()
